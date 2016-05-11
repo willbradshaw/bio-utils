@@ -1,0 +1,54 @@
+#!/bin/env bash
+set -e
+helpstr="SEQLEN - get length of specified sequence from FASTA file
+Usage: headgrep FILE SEQ_NUM
+
+Options:
+ -h: Print this help message and exit."
+
+unset file
+while [ $OPTIND -le $# ]; do
+    while getopts "h" opt; do
+        case "$opt" in
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit
+        esac
+    done
+    if [[ -z "$file" ]]; then
+        file=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+    if [[ -z "$seqnum" ]]; then
+        seqnum=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Argument errors and warnings:
+if [[ -z $file ]]; then
+    >&2 echo "Error: Input file required."
+    echo "$helpstr"
+    exit
+fi
+if [[ -z $seqnum ]]; then
+    >&2 echo "Error: Sequence number required."
+    echo "$helpstr"
+    exit
+fi
+
+# Script:
+headchar=$(awk '/./{print;exit}' $file | cut -c1)
+if [[ "$headchar" == ">" ]]; then
+    echo $(index -xs $seqnum $file 1 len | wc -c)
+else
+    >&2 echo "Error: input file must be in FASTA format."
+    exit 1
+fi
+exit

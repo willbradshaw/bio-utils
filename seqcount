@@ -1,0 +1,91 @@
+#!/bin/bash
+helpstr="SEQCOUNT - Count number of sequences in a FASTA/FASTQ file
+Usage: seqcount [option] ... SEQ_FILE
+
+Positional arguments:
+ 1. FASTA or FASTQ file to count
+The script will automaticall detect whether the input is a FASTA or FASTQ
+file from the header character (> or @).
+
+Options (defaults):
+ -r: Reference file to calculate percentage
+ -h: Display this help message and exit
+
+If a reference file is specified, the script will return the number of
+sequences in the file in both absolute form and as a percentage of
+the number of sequences in the reference file."
+
+unset fastq refq ref_file seq_file
+while [ $OPTIND -le $# ]; do
+    # Optional arguments
+    while getopts "r:qQh" opt; do
+        case "$opt" in
+            q)
+                fastq="true"
+                ;;
+            Q)
+                refq="true"
+                ;;
+            r)
+                ref_file=$OPTARG
+                ;;
+            # Else:
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit
+        esac
+    done
+    # Positional arguments:
+    if [[ -z "$seq_file" ]]; then
+        seq_file=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+#Argument errors and warnings:
+if [[ -z $seq_file ]]; then
+    >&2 echo "Error: FASTA or FASTQ input file required."
+    echo "$helpstr"
+    exit
+fi
+
+# Find number of sequences:
+headchar=$(awk '/./{print;exit}' "$seq_file" | cut -c1)
+if [[ "$headchar" == ">" ]]; then
+    factor=2
+elif [[ "$headchar" == "@" ]]; then
+    factor=4
+else
+    >&2 echo "Error: Input file must be in FASTA or FASTQ format."
+    exit
+fi
+nlines=$(egrep -v '^$' "$seq_file" | wc -l) # Excludes blank lines
+seqnum=$(expr $nlines / $factor)
+
+if [[ -n "$ref_file" ]]; then
+    rchar=$(awk '/./{print;exit}' "$ref_file" | cut -c1)
+    if [[ "$rchar" == ">" ]]; then
+        rfactor=2
+    elif [[ "$rchar" == "@" ]]; then
+        rfactor=4
+    else
+        >&2 echo "Error: Reference file must be in FASTA or FASTQ format."
+        exit
+    fi
+    rlines=$(egrep -v '^$' "$ref_file" | wc -l) # Excludes blank lines
+    refnum=$(expr $rlines / $rfactor)
+    # Print percentage
+    x=$(expr 100 \* $seqnum)
+    y=$refnum
+    perc=$(echo -| awk -v x=$x -v y=$y '{printf "%.2f\n", x/y}')%
+    echo "$seqnum ($perc)"
+else
+    echo $seqnum
+fi
+exit

@@ -1,0 +1,139 @@
+#!/bin/env bash
+helpstr="INDEX - Extract a subsequence from a FASTA file
+Usage: index [OPTIONS] FILE START END_OR_LENGTH
+
+Positional arguments:
+ 1: Input FASTA file
+ 2: Subsequence start position
+ 3: Subsequence end position / length (interpreted as end
+    position unless -l flag set)
+In end (default) mode, a value of \"len\" for argument 3 indicates
+to subset from the start position to the end of the sequence.
+
+Options:
+ -l: Run INDEX in length mode (interpret 3rd positional argument as
+     length instead of end position)
+ -x: Return only index sequence, without file header
+ -s: Sequence in file to index (1)
+ -n: Subsequence name (at start of header line) in output
+     (sequence)
+
+By default, the sequence is printed with a FASTA-formatted header line
+with the structure 
+
+>NAME|SOURCE_FILE:SEQUENCE_NUMBER|CO-ORDINATES|LENGTH
+
+Running INDEX with the -x flag will supress this header line."
+
+unset len seq name seqfile strt end_or_len nohead
+while [ $OPTIND -le $# ]; do
+    # Optional arguments
+    while getopts "lxs:n:" opt; do
+        case "$opt" in
+            l)
+                length_mode=true
+                ;;
+            s)
+                seq=$OPTARG
+                ;;
+            n)
+                name=$OPTARG
+                ;;
+            x)
+                nohead="true"
+                ;;
+            # Else:
+            *)
+                echo "Invalid argument:" $opt >&2
+        esac
+    done
+
+    # Positional arguments:
+
+    if [ -z $seqfile ]; then
+        seqfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+    if [ -z $strt ]; then
+        strt=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+    if [ -z $end_or_len ]; then
+        end_or_len=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Errors if positional arguments missing:
+if [ -z $seqfile ]; then
+    >&2 echo "Error: Sequence file required."
+    exit
+fi
+if [ -z $strt ]; then
+    >&2 echo "Error: start position required."
+    exit
+fi
+if [ -z $end_or_len ]; then
+    >&2 echo "Error: end position or subsequence length required."
+    exit
+fi
+
+# Defaults for optional arguments:
+: ${seq:=1}
+: ${name:=sequence}
+
+##########
+# SCRIPT #
+##########
+
+# Get start and end lines of sequence to be cut
+
+scaffolds=$(grep -n ">" $seqfile)
+nscaf=$(echo "$scaffolds" | wc -l)
+seqstart=$(echo "$scaffolds" | sed -ne "${seq}p" | cut -d':' -f1)
+seqstart=$((seqstart + 1))
+
+if [[ $nscaf -lt $seq ]]; then
+    >&2 echo "Error: not enough sequences in file."
+    exit
+fi
+if [ $seq == $nscaf ]; then
+    seqend=$(wc -l $seqfile | cut -d' ' -f1)
+else
+    nextstart=$(echo "$scaffolds" | sed -ne "$((${seq}+1))p" | cut -d':' -f1)
+    seqend=$(($nextstart - 1))
+fi
+
+# Extract scaffold sequence
+sequence=$(sed -ne "${seqstart},${seqend}p" $seqfile | tr "\n" " ")
+sequence="${sequence// /}"
+
+# Define end and length according to input mode
+if [[ $length_mode == true ]]; then
+    len=$end_or_len
+    end=$(expr $strt + $len - 1)
+else
+    end=$end_or_len
+    if [[ $end == len ]]; then
+        end=${#sequence}
+    fi
+    if [[ $strt -gt $end ]]; then
+        len=$(expr $strt - $end + 1)
+    else
+        len=$(expr $end - $strt + 1)
+    fi
+fi
+# Print subsequence
+if [[ $strt -gt $end ]]; then
+    if [[ -z $nohead ]]; then
+        echo '>'$name'|'$seqfile:$seq'|'$strt'-'$end'(antisense)|'${len}bp
+    fi
+    echo "$(rc ${sequence:$(($end - 1)):$len})"
+else
+    if [[ -z $nohead ]]; then
+        echo '>'$name'|'$seqfile:$seq'|'$strt'-'$end'|'${len}bp
+    fi
+    echo "${sequence:$(($strt - 1)):$len}"
+fi
+exit

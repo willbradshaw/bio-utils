@@ -1,0 +1,45 @@
+#!/bin/env bash
+set -e
+helpstr="HEADGREP - print sequence headings from a FASTA file
+Usage: headgrep FILE
+
+Options:
+ -h: Print this help message and exit."
+
+unset file
+while [ $OPTIND -le $# ]; do
+    while getopts "h" opt; do
+        case "$opt" in
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+        esac
+    done
+    if [[ -z "$file" ]]; then
+        file=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Argument errors and warnings:
+if [[ -z $file ]]; then
+    >&2 echo "Error: Input file required."
+    echo "$helpstr"
+    exit 1
+fi
+
+# Script:
+headchar=$(awk '/./{print;exit}' $file | cut -c1)
+if [[ "$headchar" == ">" ]]; then
+    egrep -n '^>' $file
+else
+    >&2 echo "Error: input file must be in FASTA format."
+    exit 1
+fi
+exit

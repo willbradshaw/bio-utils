@@ -1,0 +1,62 @@
+#!/bin/env bash
+set -e
+helpstr="RC - reverse-complement a nucleotide sequence or FASTA file.
+Can handle base ambiguity codes.
+Usage:
+  rc SEQUENCE
+  rc -f FILE
+
+Options:
+ -f: Treat input as a filepath rather than a nucleotide sequence.
+ -h: Print this help message and exit.
+"
+
+unset filein input
+while [ $OPTIND -le $# ]; do
+    while getopts "fh" opt; do
+        case "$opt" in
+            f)
+                filein="true"
+                ;;
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit
+        esac
+    done
+    if [[ -z "$input" ]]; then
+        input=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Argument errors and warnings:
+if [[ -z $input ]]; then
+    >&2 echo "Error: Input file or sequence required."
+    echo "$helpstr"
+    exit
+fi
+
+# Script:
+
+in="[ATUGCatugcNnKMRYSWkmryswBVHDbvhdXx]"
+to="[TAACGtaacgNnMKYRWSmkyrwsVBDHvbdhXx]"
+
+if [[ -z $filein ]]; then
+    echo $input | tr "$in" "$to" | rev
+else
+    while read line; do
+        nhead=$(echo "$line" | egrep '^>' | wc -l)
+        if [[ $nhead -ge 1 ]]; then
+            echo ${line}\|RC
+        else
+            echo $line | tr "$in" "$to" | rev
+        fi
+    done < $input
+fi
+exit
