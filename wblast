@@ -2,7 +2,7 @@
 set -e
 helpstr="WBLAST - Will's wrapper script for command-line BLAST
 Usage: wblast [OPTIONS] [-q QUERY_FILE | -Q QUERY_SEQUENCE] 
-       [-s SUBJECT_FILE | -d DATABASE | -n]
+       [-s SUBJECT_FILE | -d DATABASE]
 
 Input arguments:
  -q: Query file path; OR
