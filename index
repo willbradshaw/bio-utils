@@ -17,6 +17,7 @@ Options:
  -s: Sequence in file to index (1)
  -n: Subsequence name (at start of header line) in output
      (sequence)
+ -h: Print this help message and exit
 
 By default, the sequence is printed with a FASTA-formatted header line
 with the structure 
@@ -28,7 +29,7 @@ Running INDEX with the -x flag will supress this header line."
 unset len seq name seqfile strt end_or_len nohead
 while [ $OPTIND -le $# ]; do
     # Optional arguments
-    while getopts "lxs:n:" opt; do
+    while getopts "lxs:n:h" opt; do
         case "$opt" in
             l)
                 length_mode=true
@@ -43,8 +44,15 @@ while [ $OPTIND -le $# ]; do
                 nohead="true"
                 ;;
             # Else:
+            h)
+                echo "$helpstr"
+                exit
+                ;;
             *)
                 echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+                ;;
         esac
     done
 
@@ -68,15 +76,15 @@ shift $((OPTIND-1))
 # Errors if positional arguments missing:
 if [ -z $seqfile ]; then
     >&2 echo "Error: Sequence file required."
-    exit
+    exit 1
 fi
 if [ -z $strt ]; then
     >&2 echo "Error: start position required."
-    exit
+    exit 1
 fi
 if [ -z $end_or_len ]; then
     >&2 echo "Error: end position or subsequence length required."
-    exit
+    exit 1
 fi
 
 # Defaults for optional arguments:
@@ -96,7 +104,7 @@ seqstart=$((seqstart + 1))
 
 if [[ $nscaf -lt $seq ]]; then
     >&2 echo "Error: not enough sequences in file."
-    exit
+    exit 1
 fi
 if [ $seq == $nscaf ]; then
     seqend=$(wc -l $seqfile | cut -d' ' -f1)

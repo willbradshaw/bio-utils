@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 set -e
 helpstr="SUMSEQ - print total length of all sequences in FASTA file
 Usage: headgrep FILE
@@ -17,7 +17,7 @@ while [ $OPTIND -le $# ]; do
             *)
                 echo "Invalid argument:" $opt >&2
                 echo "$helpstr"
-                exit
+                exit 1
         esac
     done
     if [[ -z "$file" ]]; then
@@ -31,7 +31,7 @@ shift $((OPTIND-1))
 if [[ -z $file ]]; then
     >&2 echo "Error: Input file required."
     echo "$helpstr"
-    exit
+    exit 1
 fi
 
 # Script:

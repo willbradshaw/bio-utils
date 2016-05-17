@@ -25,7 +25,7 @@ while [ $OPTIND -le $# ]; do
             *)
                 echo "Invalid argument:" $opt >&2
                 echo "$helpstr"
-                exit
+                exit 1
         esac
     done
     if [[ -z "$input" ]]; then
@@ -39,7 +39,7 @@ shift $((OPTIND-1))
 if [[ -z $input ]]; then
     >&2 echo "Error: Input file or sequence required."
     echo "$helpstr"
-    exit
+    exit 1
 fi
 
 # Script:

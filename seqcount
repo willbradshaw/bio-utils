@@ -37,7 +37,7 @@ while [ $OPTIND -le $# ]; do
             *)
                 echo "Invalid argument:" $opt >&2
                 echo "$helpstr"
-                exit
+                exit 1
         esac
     done
     # Positional arguments:
@@ -52,7 +52,7 @@ shift $((OPTIND-1))
 if [[ -z $seq_file ]]; then
     >&2 echo "Error: FASTA or FASTQ input file required."
     echo "$helpstr"
-    exit
+    exit 1
 fi
 
 # Find number of sequences:
@@ -63,7 +63,7 @@ elif [[ "$headchar" == "@" ]]; then
     factor=4
 else
     >&2 echo "Error: Input file must be in FASTA or FASTQ format."
-    exit
+    exit 1
 fi
 nlines=$(egrep -v '^$' "$seq_file" | wc -l) # Excludes blank lines
 seqnum=$(expr $nlines / $factor)
@@ -76,7 +76,7 @@ if [[ -n "$ref_file" ]]; then
         rfactor=4
     else
         >&2 echo "Error: Reference file must be in FASTA or FASTQ format."
-        exit
+        exit 1
     fi
     rlines=$(egrep -v '^$' "$ref_file" | wc -l) # Excludes blank lines
     refnum=$(expr $rlines / $rfactor)
