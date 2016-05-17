@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+set -e
+helpstr="WBLAST - Will's wrapper script for command-line BLAST
+Usage: wblast [OPTIONS] [-q QUERY_FILE | -Q QUERY_SEQUENCE] 
+       [-s SUBJECT_FILE | -d DATABASE | -n]
+
+Input arguments:
+ -q: Query file path; OR
+ -Q: Query sequence
+ -s: Subject file path; OR
+ -d: Database prefix path
+All else being equal, aligning to a database is much faster
+than aligning to a subject file.
+
+Output filtering options (defaults):
+ -l: Minimum alignment length (0)
+ -i, -y: Minimum % identity (0)
+ -c: Minimum query coverage (0)
+ -b: Best-Hits parameters (0.25 0.05)
+Best-Hits controls how stringently BLAST filters overlapping
+matches. The default settings are maximally stringent, to give
+the minimum number of matches. Lowering the first parameter
+or increasing the second will decrease the stringency;
+acceptable values are 0.1-0.25 and 0.05-0.25, respectively.
+
+Other options (defaults)
+ -B: BLAST script to run (blastn)
+ -t: BLAST algorithm to use (megablast)
+ -F: Return full pairwise alignment information instead of summary table
+ -o: Other options to pass to blast
+ -C: Print the full blast command to be executed and exit
+ -h: Print this help message and exit
+
+Suitable arguments for -B depend on the nature of the query and subject
+sequences (nucleotide/NT vs protein/PR):
+
+         -----------------NT---------SUBJECT----------PR----------------
+      NT |          blastn, tblastx     |           blastx             |
+QUERY    |------------------------------|------------------------------|
+      PR |             tblastn          | blastp, psiblast, deltablast |
+         ---------------------------------------------------------------
+
+The values -t can take depends upon the value of -B:
+
+  -B    |   -t
+--------|---------------------------------------------------------
+blastn  | blastn, blastn-short, dc-megablast, megablast, rmblastn
+blastx  | blastx, blastx-fast
+tblastn | tblastn, tblastn-fast
+blastp  | blastp, blastp-fast, blastp-short
+
+See the BLAST documentation for more details. For tblastx, psiblast &
+deltablast -t should be left unspecified."
+
+# Defaults and unsetting
+fmt='6 qseqid sseqid pident qcovhsp length mismatch gapopen gaps sstrand qstart qend sstart send'
+incmd=cat
+outcmd=eval
+minlength=0
+ident=0
+bscript=blastn
+besthits="0.25 0.05"
+unset q bstring
+# Get arguments
+while getopts "q:Q:s:d:nl:i:y:c:b:B:t:Fo:Ch" opt; do
+    case $opt in
+        q)
+            q=$OPTARG
+            ;;
+        Q)
+            q=$OPTARG
+            incmd=echo
+            ;;
+        s)
+            bstring="$bstring -subject $OPTARG"
+            ;;
+        d)
+            bstring="$bstring -db $OPTARG"
+            ;;
+        l)
+            minlength=$OPTARG
+            ;;
+        [iy])
+            ident=$OPTARG
+            ;;
+        c)
+            bstring="$bstring -qcov_hsp_perc $OPTARG"
+            ;;
+        b)
+            besthits="$OPTARG"
+            ;;
+        B)
+            bscript=$OPTARG
+            ;;
+        t)
+            bstring="$bstring -task $OPTARG"
+            ;;
+        F)
+            fmt=0
+            ;;
+        o)
+            bstring="$bstring $OPTARG"
+            ;;
+        C)
+            outcmd=echo
+            ;;
+        h)
+            echo "$helpstr"
+            exit
+            ;;
+        *)
+            echo "Invalid argument:" $opt >&2
+            print "$helpstr"
+            exit 1
+            ;;
+    esac
+done
+bstring="$bstring -best_hit_overhang ${besthits%% *}"
+bstring="$bstring -best_hit_score_edge ${besthits##* }"
+
+# Argument errors and warnings:
+if [[ -z "$q" ]]; then
+    >&2 echo "Error: query file (-q) or sequence (-Q) required."
+    exit 1
+fi
+
+# Main script:
+if [[ "$fmt" == "0" ]]; then
+    bcmd="$incmd $q | $bscript $bstring"
+else 
+    bcmd="$incmd $q | $bscript $bstring -outfmt '$fmt' | column -t"
+    bcmd="$bcmd | awk -v m=$minlength -v i=$ident '{if (\$5>=m && \$3>=i)print }'"
+fi
+$outcmd $bcmd
+exit
