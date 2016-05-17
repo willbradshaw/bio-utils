@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -e
+helpstr="SBLAST - BLAST a FASTA file against itself and remove redundant
+alignments.
+Usage: sblast [OPTIONS] SEQUENCE_FILE
+
+Positional arguments:
+ 1: Sequence file to BLAST against itself
+
+Output filtering options (defaults):
+ -l: Minimum alignment length (0)
+ -i, -y: Minimum % identity (0)
+ -c: Minimum query coverage (0)
+ -b: Best-Hits parameters (0.25 0.05)
+See WBLAST documentation for more information
+
+Other options (defaults)
+ -B: BLAST script to run (blastn)
+ -t: BLAST algorithm to use (megablast)
+ -o: Other options to pass to BLAST
+ -h: Print this help message and exit
+
+Suitable arguments for -B depend on the nature of the sequence file
+(nucleotide/NT vs protein/PR):
+- NT: blastn or tblastx
+- PR: blastp, psiblast or deltablast
+
+The values -t can take depends upon the value of -B:
+
+  -B    |   -t
+--------|---------------------------------------------------------
+blastn  | blastn, blastn-short, dc-megablast, megablast, rmblastn
+blastp  | blastp, blastp-fast, blastp-short
+
+See the BLAST documentation for more details. For tblastx, psiblast &
+deltablast -t should be left unspecified."
+
+# Defaults and unsetting
+unset file wbstr
+# Get arguments
+while [ $OPTIND -le $# ]; do
+    while getopts "l:i:y:c:b:B:t:o:h" opt; do
+        case $opt in
+            [liycbBto])
+                wbstr="$wbstr -$opt $OPTARG"
+                ;;
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                print "$helpstr"
+                exit 1
+                ;;
+        esac
+    done
+    if [[ -z "$file" ]]; then
+        file=${@:$OPTIND:1}
+        wbstr="$wbstr -q $file -s $file"
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+
+# Argument errors and warnings:
+if [[ -z "$file" ]]; then
+    >&2 echo "Error: sequence file required."
+    exit 1
+fi
+
+# Get wblast table alignment
+out=$(wblast $wbstr)
+# Remove self-alignments of individual sequences:
+out=$(echo "$out" | awk '{if($1 != $2 || $10 != $12 || $11 != $13) print}')
+# Remove commutative aligments:
+function rcom {
+    read qname sname pid qcov len mm go gx strand qstart qend sstart send <<< $1
+    lines=$(echo "$out")
+    qname=${qname//\|/\\|}
+    sname=${sname//\|/\\|}
+    pattern="$qname\s+$sname\s+$pid\s+$qcov\s+$len\s+$mm\s+$go\s+$gx"
+    if [[ $strand == "plus" ]]; then
+        pattern="$pattern\s+$strand\s+$sstart\s+$send\s+$qstart\s+$qend"
+    else
+        pattern="$pattern\s+$strand\s+$send\s+$sstart\s+$qend\s+$qstart"
+    fi
+    # Get list of commutative line numbers
+    commlines=$(echo "$lines" | egrep -n "$pattern" | cut -d":" -f1)
+    # Remove commutative lines
+    for c in $commlines; do
+        lines=$(echo "$lines" | sed "${c}d")
+    done
+    echo "$lines"
+}
+n=1
+nline=$(echo "$out" | wc -l)
+while [[ $n -le $nline ]]; do
+    line=$(echo "$out" | sed "${n}q;d")
+    out=$(rcom "$line")
+    n=$(expr $n + 1)
+    nline=$(echo "$out" | wc -l)
+done
+echo "$out"
+exit

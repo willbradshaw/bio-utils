@@ -27,8 +27,8 @@ Other options (defaults)
  -B: BLAST script to run (blastn)
  -t: BLAST algorithm to use (megablast)
  -F: Return full pairwise alignment information instead of summary table
- -o: Other options to pass to blast
- -C: Print the full blast command to be executed and exit
+ -o: Other options to pass to BLAST
+ -C: Print the full BLAST command to be executed and exit
  -h: Print this help message and exit
 
 Suitable arguments for -B depend on the nature of the query and subject
@@ -62,7 +62,7 @@ bscript=blastn
 besthits="0.25 0.05"
 unset q bstring
 # Get arguments
-while getopts "q:Q:s:d:nl:i:y:c:b:B:t:Fo:Ch" opt; do
+while getopts "q:Q:s:d:l:i:y:c:b:B:t:Fo:Ch" opt; do
     case $opt in
         q)
             q=$OPTARG
