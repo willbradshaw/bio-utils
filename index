@@ -126,6 +126,9 @@ else
     if [[ $end == len ]]; then
         end=${#sequence}
     fi
+    if [[ $strt == len ]]; then
+        strt=${#sequence}
+    fi
     if [[ $strt -gt $end ]]; then
         len=$(expr $strt - $end + 1)
     else
@@ -135,12 +138,12 @@ fi
 # Print subsequence
 if [[ $strt -gt $end ]]; then
     if [[ -z $nohead ]]; then
-        echo '>'$name'|'$seqfile:$seq'|'$strt'-'$end'(antisense)|'${len}bp
+        echo '>'$name'|'$(basename $seqfile):$seq'|'$strt'-'$end'(antisense)|'${len}bp
     fi
     echo "$(rc ${sequence:$(($end - 1)):$len})"
 else
     if [[ -z $nohead ]]; then
-        echo '>'$name'|'$seqfile:$seq'|'$strt'-'$end'|'${len}bp
+        echo '>'$name'|'$(basename $seqfile):$seq'|'$strt'-'$end'|'${len}bp
     fi
     echo "${sequence:$(($strt - 1)):$len}"
 fi
