@@ -95,7 +95,6 @@ fi
 
 # Get start and end lines of sequence to be cut
 
-echo seq=$seq
 scaffolds=$(grep -n ">" $seqfile)
 nscaf=$(echo "$scaffolds" | wc -l)
 seqstart=$(echo "$scaffolds" | sed -ne "${seq}p" | cut -d':' -f1)
