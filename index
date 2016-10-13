@@ -68,7 +68,6 @@ while [ $OPTIND -le $# ]; do
         end_or_len=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
     fi
-    echo $seqfile $strt $end_or_len
 done
 shift $((OPTIND-1))
 
