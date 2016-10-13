@@ -58,18 +58,17 @@ while [ $OPTIND -le $# ]; do
 
     # Positional arguments:
 
-    if [ -z $seqfile ]; then
+    if [[ -z "$seqfile" ]]; then
         seqfile=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
-    fi
-    if [ -z $strt ]; then
+    elif [[ -z "$strt" ]]; then
         strt=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
-    fi
-    if [ -z $end_or_len ]; then
+    elif [[ -z "$end_or_len" ]]; then
         end_or_len=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
     fi
+    echo $seqfile $strt $end_or_len
 done
 shift $((OPTIND-1))
 
@@ -97,6 +96,7 @@ fi
 
 # Get start and end lines of sequence to be cut
 
+echo seq=$seq
 scaffolds=$(grep -n ">" $seqfile)
 nscaf=$(echo "$scaffolds" | wc -l)
 seqstart=$(echo "$scaffolds" | sed -ne "${seq}p" | cut -d':' -f1)
