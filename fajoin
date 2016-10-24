@@ -1,53 +1,38 @@
-#!/bin/env bash
-helpstr="FAJOIN - join the lines of each sequence in a FASTA file
-Usage: fajoin FILE
+#!/usr/bin/env python
 
-Options:
- -h: Print this help message and exit
+import argparse
+parser = argparse.ArgumentParser(description='Join the lines of each sequence\
+         in a FASTA file.')
+parser.add_argument('file', help="FASTA file to process")
+parser.add_argument('-o', metavar="<str>", default="",
+        help="output path (default: print to stdout)")
+args = parser.parse_args()
 
-NOTE: Currently very slow; Python might work better.
-"
+# Get lines
+f = open(args.file, "r")
+try:
+    lines = f.readlines()
+finally:
+    f.close()
+lines=["".join(line.split()) for line in lines] # Remove newlines etc.
 
-unset file
-while [ $OPTIND -le $# ]; do
-    while getopts "h" opt; do
-        case "$opt" in
-            h)
-                echo "$helpstr"
-                exit
-                ;;
-            *)
-                echo "Invalid argument:" $opt >&2
-                echo "$helpstr"
-                exit 1
-        esac
-    done
-    if [[ -z "$file" ]]; then
-        file=${@:$OPTIND:1}
-        OPTIND=$(expr $OPTIND + 1)
-    fi
-done
-shift $((OPTIND-1))
+# Perform joining
+n = 0
+while n < len(lines)-1:
+    if ">" not in lines[n] and ">" not in lines[n+1]:
+        lines[n].replace("\n", "")
+        lines[n] += lines[n+1]
+        del lines[n+1]
+    else:
+        n += 1
 
-# Argument errors and warnings:
-if [[ -z $file ]]; then
-    >&2 echo "Error: Input file required."
-    echo "$helpstr"
-    exit 1
-fi
-
-# Script:
-headchar=$(awk '/./{print;exit}' "$file" | cut -c1)
-if [[ "$headchar" != ">" ]]; then
-    >&2 echo "Error: input file must be in FASTA format."
-    exit 1
-else
-    headers=$(headgrep "$file")
-    nscaf=$(echo "$headers" | wc -l | cut -d" " -f1)
-    for i in $(seq 1 $nscaf); do
-        >&2 echo -n "$i "
-        echo "$headers" | sed "${i}q;d" | cut -d':' -f2
-        index -xs "$i" "$file" 1 len
-    done
-fi
-exit
+# Output
+outstr = "\n".join(lines)+"\n"
+if len(args.o) > 0:
+    outfile=open(args.o, "w")
+    try:
+        outfile.write(outstr)
+    finally:
+        outfile.close()
+else:
+    print outstr
