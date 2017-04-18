@@ -1,0 +1,71 @@
+#!/bin/env bash
+helpstr="GETSEQS - Extract sequences from a FASTX file based on a pattern file
+Usage getseqs [OPTIONS] SEQ_FILE HEADER_FILE
+
+Positional arguments:
+ 1: The FASTA or FASTQ sequence file from which to take headers
+ 2: A file containing a list of patterns (one per line) to match against
+    sequence headers
+Any sequence in the sequence file whose header matches any pattern in the
+pattern file will be included in the output
+
+Options:
+ -q: Sequence file is in FASTQ format (default: FASTA)
+ -o: Path to output file (default: prints to stdout)
+ -h: Print this help message and exit"
+
+unset isfastq outfile seqfile headfile
+while [ $OPTIND -le $# ]; do
+    # Optional arguments
+    while getopts "qo:h" opt; do
+        case "$opt" in
+            q)
+                isfastq="true"
+                ;;
+            o)
+                outfile=$OPTARG
+                ;;
+            # Else:
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Positional arguments:
+
+    if [[ -z "$seqfile" ]]; then
+        seqfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    elif [[ -z "$headfile" ]]; then
+        headfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Errors if positional arguments missing:
+if [[ -z "$seqfile" ]]; then
+    >&2 echo "Error: Sequence file required."
+    exit 1
+fi
+if [[ -z "$headfile" ]]; then
+    >&2 echo "Error: Header list file required."
+    exit 1
+fi
+
+n=1
+if [[ "$isfastq" == "true" ]]; then n=3; fi
+
+if [[ -n "$outfile" ]]; then
+    grep -f "$headfile" -A "$n" "$seqfile" --no-group-separator > "$outfile"
+else
+    grep -f "$headfile" -A "$n" "$seqfile" --no-group-separator
+fi
+exit

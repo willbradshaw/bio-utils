@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+helpstr="INDEX_TAB - extract multiple sequences from the same FASTA file
+Usage: index_tab [OPTIONS] SEQ_FILE TAB_FILE OUT_FILE
+
+Positional arguments:
+ 1: Input FASTA file
+ 2: Input tabular file specifying subsequences
+ 3: Path to output file
+
+Options:
+ -h: Print this help message and exit
+
+Extract multiple subsequences from the same FASTA file and save them to
+an output file. The subsequences to extract are specified by a tabular
+input file with line structure
+
+NAME  SEQ  START  END
+
+where NAME is the name of the sequence in the output file, SEQ is the sequence
+number within the input file (e.g. 1 to extract from the first sequence in the
+file) and START and END specify the sequence co-ordinates to extract.
+
+NB: For more information on the extraction process, see the 'index' bio-util."
+
+unset seqfile tabfile outfile name seq strt end
+while [ $OPTIND -le $# ]; do
+    # Optional arguments
+    while getopts "h" opt; do
+        case "$opt" in
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Positional arguments:
+
+    if [[ -z "$seqfile" ]]; then
+        seqfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    elif [[ -z "$tabfile" ]]; then
+        tabfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    elif [[ -z "$outfile" ]]; then
+        outfile=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+
+shift $((OPTIND-1))
+# Errors if positional arguments missing:
+if [ -z "$seqfile" ]; then
+    >&2 echo "Error: Sequence file required."
+    exit 1
+fi
+if [ -z "$tabfile" ]; then
+    >&2 echo "Error: Tabular file required."
+    exit 1
+fi
+if [ -z "$outfile" ]; then
+    >&2 echo "Error: Output file path required."
+    exit 1
+fi
+
+while read line; do
+    name=$(echo $line | cut -d" " -f1)
+    seq=$(echo $line | cut -d" " -f2)
+    strt=$(echo $line | cut -d" " -f3)
+    end=$(echo $line | cut -d" " -f4)
+    index -s "$seq" -n "$name" "$seqfile" "$strt" "$end" >> "$outfile"
+done < "$tabfile"
+
+exit
