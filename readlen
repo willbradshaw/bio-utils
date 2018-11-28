@@ -1,0 +1,63 @@
+#!/bin/env bash
+set -e
+helpstr="READLEN - get read length from the first read of a FASTQ file
+Usage: readlen [OPTIONS] FILE
+
+Options:
+ -z: File is compressed using gzip; decompress before reading
+ -h: Print this help message and exit."
+
+unset file gzipped
+while [[ $OPTIND -le $# ]]; do
+    while getopts "zh" opt; do
+        case "$opt" in
+            z)
+                gzipped=true
+                ;;
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+        esac
+    done
+    if [[ -z "$file" ]]; then
+        file=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Argument errors and warnings:
+if [[ -z "$file" ]]; then
+    >&2 echo "Error: Input file required."
+    echo "$helpstr"
+    exit 1
+fi
+
+############
+## SCRIPT ##
+############
+
+# Check for valid file format
+if [[ "$gzipped" == true ]]; then
+    headchar=$(awk '/./{print;exit}' <(zcat "$file") | cut -c1)
+else
+    headchar=$(awk '/./{print;exit}' "$file" | cut -c1)
+fi
+if [[ "$headchar" != "@" ]]; then
+    >&2 echo "Error: input file must be in FASTQ format."
+    exit 1
+fi
+
+# TODO: Control for empty header lines
+if [[ "$gzipped" == true ]]; then
+    sed '2q;d' <(zcat "$file") | wc -c
+else
+    sed '2q;d' "$file" | wc -c
+fi
+
+exit
