@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 set -e
 helpstr="HEADGREP - print sequence headings from a FASTA file
 Usage: headgrep FILE

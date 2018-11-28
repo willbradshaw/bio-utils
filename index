@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 helpstr="INDEX - Extract a subsequence from a FASTA file
 Usage: index [OPTIONS] FILE START END_OR_LENGTH
 

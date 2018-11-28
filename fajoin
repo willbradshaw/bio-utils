@@ -35,4 +35,4 @@ if len(args.o) > 0:
     finally:
         outfile.close()
 else:
-    print outstr
+    print(outstr)

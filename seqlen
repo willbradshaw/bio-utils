@@ -1,13 +1,14 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 set -e
-helpstr="SEQLEN - get length of specified sequence from FASTA file
-Usage: headgrep FILE SEQ_NUM
+helpstr="SEQLEN - get length of specified sequence from FASTA file, or of all
+sequences combined
+Usage: headgrep FILE [SEQ_NUM]
 
 Options:
  -h: Print this help message and exit."
 
 unset file
-while [ $OPTIND -le $# ]; do
+while [[ $OPTIND -le $# ]]; do
     while getopts "h" opt; do
         case "$opt" in
             h)
@@ -23,12 +24,11 @@ while [ $OPTIND -le $# ]; do
     if [[ -z "$file" ]]; then
         file=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
-    fi
-    if [[ -z "$seqnum" ]]; then
+    elif [[ -z "$seqnum" ]]; then
         seqnum=${@:$OPTIND:1}
         OPTIND=$(expr $OPTIND + 1)
     fi
-done
+done # TODO: Fix so doesn't cycle if add extra options
 shift $((OPTIND-1))
 
 # Argument errors and warnings:
@@ -37,18 +37,22 @@ if [[ -z $file ]]; then
     echo "$helpstr"
     exit 1
 fi
-if [[ -z $seqnum ]]; then
-    >&2 echo "Error: Sequence number required."
-    echo "$helpstr"
-    exit 1
-fi
+#if [[ -z $seqnum ]]; then
+#    >&2 echo "Error: Sequence number required."
+#    echo "$helpstr"
+#    exit 1
+#fi
 
 # Script:
 headchar=$(awk '/./{print;exit}' $file | cut -c1)
-if [[ "$headchar" == ">" ]]; then
-    echo $(index -xs $seqnum $file 1 len | wc -c)
-else
+if [[ "$headchar" != ">" ]]; then
     >&2 echo "Error: input file must be in FASTA format."
     exit 1
+fi
+if [[ -n "$seqnum" ]]; then
+    echo $(index -xs $seqnum $file 1 len | wc -c)
+else
+    # Join sequence lines together and get total length
+    echo $(grep -v "$headchar" "$file" | paste -sd "" - | wc -c)
 fi
 exit

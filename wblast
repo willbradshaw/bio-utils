@@ -16,10 +16,9 @@ Output filtering options (defaults):
  -l: Minimum alignment length (0)
  -i, -y: Minimum % identity (0)
  -c: Minimum query coverage (0)
- -b: Best-Hits parameters (0.25 0.05)
+ -b: Best-Hits parameters (0.1 0.1)
 Best-Hits controls how stringently BLAST filters overlapping
-matches. The default settings are maximally stringent, to give
-the minimum number of matches. Lowering the first parameter
+matches. Lowering the first parameter
 or increasing the second will decrease the stringency;
 acceptable values are 0.1-0.25 and 0.05-0.25, respectively.
 
@@ -53,13 +52,13 @@ See the BLAST documentation for more details. For tblastx, psiblast &
 deltablast -t should be left unspecified."
 
 # Defaults and unsetting
-fmt='6 qseqid sseqid pident qcovhsp length mismatch gapopen gaps sstrand qstart qend sstart send'
+fmt="6 qseqid sseqid pident qcovhsp length mismatch gapopen gaps sstrand qstart qend sstart send evalue bitscore qlen slen"
 incmd=cat
 outcmd=eval
 minlength=0
 ident=0
 bscript=blastn
-besthits="0.25 0.05"
+besthits="0.1 0.1"
 unset q bstring
 # Get arguments
 while getopts "q:Q:s:d:l:i:y:c:b:B:t:Fo:Ch" opt; do
