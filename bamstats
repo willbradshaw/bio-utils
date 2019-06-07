@@ -1,0 +1,53 @@
+#!/bin/env bash
+set -e
+helpstr="READLEN - get read length from the first read of a FASTQ file
+Usage: readlen [OPTIONS] FILE
+
+Options:
+ -z: File is compressed using gzip; decompress before reading
+ -h: Print this help message and exit."
+
+unset file gzipped
+while [[ $OPTIND -le $# ]]; do
+    while getopts "zh" opt; do
+        case "$opt" in
+            z)
+                gzipped=true
+                ;;
+            h)
+                echo "$helpstr"
+                exit
+                ;;
+            *)
+                echo "Invalid argument:" $opt >&2
+                echo "$helpstr"
+                exit 1
+        esac
+    done
+    if [[ -z "$file" ]]; then
+        file=${@:$OPTIND:1}
+        OPTIND=$(expr $OPTIND + 1)
+    fi
+done
+shift $((OPTIND-1))
+
+# Argument errors and warnings:
+if [[ -z "$file" ]]; then
+    >&2 echo "Error: Input file required."
+    echo "$helpstr"
+    exit 1
+fi
+
+############
+## SCRIPT ##
+############
+
+bn=$(basename -f "$file")
+prefix=${bn%%\.*} ## remove file extensions
+
+samtools view -b "$file" > ${prefix}.bam
+samtools sort ${prefix}.bam > ${prefix}.sorted.bam
+samtools index ${prefix}.sorted.bam > ${prefix}.sorted.bai
+samtools idxstats ${prefix}.sorted.bam > ${prefix}.idxstats.txt
+
+exit
